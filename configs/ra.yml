@@ -1,0 +1,175 @@
+experiment:
+  alias: ra
+  seed: &seed 0
+  data_handler: "4"
+  valid_size: 0.2
+  test_size: 0.2
+  evaluation_metrics: [accuracy, roc_auc_ovr, neg_log_loss, sce]
+  input: [
+    # Demographics:
+    age, gender, #college_completed, work_status,
+    # Health indicators:
+    bmi_cat, bp_cat, #smoker, drinker,
+    # Pregnancy:
+    pregnant_since, pregnant_current,
+    # Insurance status:
+    insurance_private, insurance_medicare, insurance_medicaid, insurance_none,
+    # Disease indicators:
+    cdai_cat, duration_ra, ccp_outcome, rf_outcome, ccpposever, rfposever,
+    erosdis, jtspnarrow, jtdeform,
+    # Infections:
+    infection, tb_outcome,
+    # Comorbidities:
+    comor_metabolic, comor_cvd, comor_respiratory, comor_dil, comor_cancer,
+    comor_gi_liver, comor_other, comor_musculoskeletal,
+    # Past comorbidities:
+    hxcomor_metabolic, hxcomor_cvd, hxcomor_respiratory, hxcomor_dil,
+    hxcomor_cancer, hxcomor_gi_liver, hxcomor_other,
+    # Treatment history:
+    hx2csdmard, hx2tnf, hx2nontnf, hx2jak, hx2bio, hx2biojak, prev_therapy,
+  ]
+  target: therapy
+  outcome: outcome
+  identifier: id2
+  ffill: [
+    age, gender, #college_completed, work_status,
+    bmi_cat, bp_cat, #smoker, drinker,
+    insurance_private, insurance_medicare, insurance_medicaid, insurance_none,
+    cdai_cat, duration_ra, erosdis, jtspnarrow, jtdeform,
+  ]
+  cohort_params:
+    max_days_since_biojakinit: 180
+    max_days_until_biojakinit: 30
+    exclude_other_therapies: true
+    require_recorded_outcome: true
+    require_regular_followup: true
+    followup_deltamin: 30
+    followup_deltamax: 270
+    require_fixed_followup: true
+    followup_total: 720
+
+results:
+  root_dir: /mimer/NOBACKUP/groups/inpole/ppdev/results
+
+data:
+  root_dir: /mimer/NOBACKUP/groups/inpole/ppdev/data
+  raw_data_path: /mimer/NOBACKUP/groups/inpole/ppdev/data/dwsub1.pkl
+  preprocessed_data_path: /mimer/NOBACKUP/groups/inpole/ppdev/data/data_preprocessed.pkl
+
+model_selection: 
+  search: random  # exhaustive or random
+  n_iter: 30  # Only used for randomized search
+  scoring: [roc_auc_ovr, roc_auc_ovr_switches]
+  # TODO: Consider using a custom scorer that combines roc_auc_ovr and roc_auc_ovr_switches.
+  # Check if there is a large discrepancy between the two metrics.
+  refit: roc_auc_ovr
+  n_splits: 3
+  test_size: 0.2
+  seed: *seed
+
+estimators:
+  dt:
+    use_sample_weights: false
+    params:
+      o: outcome
+    numerical_transformation: none
+    categorical_transformation: onehot
+    calibrate: true
+    include_ccp_alphas: true
+    hparams:
+      data_selector__frac_pre_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      data_selector__frac_post_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      estimator__class_weight: [null]
+      estimator__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+
+  dt_stage:
+    use_sample_weights: false
+    params: 
+      stages: stage2
+      o: outcome
+    numerical_transformation: none
+    categorical_transformation: onehot
+    calibrate: true
+    include_ccp_alphas: true
+    hparams:
+      data_selector__frac_pre_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      data_selector__frac_post_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      estimator__estimator_bl__class_weight: [null]
+      estimator__estimator_bl__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_bl__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+      estimator__estimator_fu__class_weight: [null]
+      estimator__estimator_fu__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_fu__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+
+  dt_switch:
+    use_sample_weights: false
+    params:
+      y_prev: y_prev
+      o: outcome
+    numerical_transformation: none
+    categorical_transformation: onehot
+    calibrate: true
+    include_ccp_alphas: true
+    hparams:
+      data_selector__frac_pre_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      data_selector__frac_post_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      estimator__estimator_s__class_weight: [null]
+      estimator__estimator_s__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_s__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+      estimator__estimator_t__class_weight: [null]
+      estimator__estimator_t__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_t__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+
+  dt_stage_switch:
+    use_sample_weights: false
+    params:
+      stages: stage2
+      y_prev: y_prev
+      o: outcome
+    numerical_transformation: none
+    categorical_transformation: onehot
+    calibrate: true
+    include_ccp_alphas: true
+    hparams:
+      data_selector__frac_pre_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      data_selector__frac_post_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      estimator__estimator_bl__class_weight: [null]
+      estimator__estimator_bl__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_bl__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+      estimator__estimator_s__class_weight: [null]
+      estimator__estimator_s__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_s__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+      estimator__estimator_t__class_weight: [null]
+      estimator__estimator_t__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_t__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+
+  mlp:
+    is_net_estimator: true
+    use_sample_weights: false
+    params: null
+    numerical_transformation: scale
+    categorical_transformation: onehot
+    calibrate: true
+    hparams:
+      data_selector__frac_pre_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      data_selector__frac_post_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      estimator__batch_size: [32, 64, 128]
+      estimator__optimizer__lr: [0.001, 0.01, 0.1]
+      estimator__module__encoder__hidden_dims: [[16,], [32,], [64,], [16, 16], [32, 32], [64, 64]]
+      estimator__module__encoder__output_dim: [16, 32, 64]
+
+  rnn:
+    is_net_estimator: true
+    use_sample_weights: false
+    params:
+      groups: id
+    numerical_transformation: scale
+    categorical_transformation: onehot
+    calibrate: true
+    hparams:
+      data_selector__frac_pre_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      data_selector__frac_post_bl: [0.0, 0.25, 0.5, 0.75, 1.0]
+      estimator__batch_size: [32, 64, 128]
+      estimator__optimizer__lr: [0.001, 0.01, 0.1]
+      estimator__module__encoder__output_dim: [16, 32, 64]

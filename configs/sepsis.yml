@@ -1,0 +1,105 @@
+experiment:
+  alias: sepsis
+  seed: &seed 0
+  data_handler: "sepsis"
+  valid_size: 0.2
+  test_size: 0.2
+  evaluation_metrics: [accuracy, roc_auc_ovr, sce]
+  input: [
+    gender, HR, SysBP, MeanBP, DiaBP, Shock_Index, Hb, BUN, Creatinine,
+    output_4hourly, Arterial_pH, Arterial_BE, HCO3, Arterial_lactate,
+    PaO2_FiO2, age, elixhauser, SOFA, prev_input_4hourly, prev_max_dose_vaso,
+  ]
+  target: treatment
+  outcome: outcome
+  identifier: icustayid
+  max_len: 6
+
+results:
+  root_dir: /mimer/NOBACKUP/groups/inpole/ppdev/results
+
+data:
+  root_dir: /mimer/NOBACKUP/groups/inpole/ppdev/data
+  raw_data_path: null
+  preprocessed_data_path: /mimer/NOBACKUP/groups/inpole/ppdev/data/sepsis_data.csv
+
+model_selection: 
+  search: random  # exhaustive or random
+  n_iter: 30  # Only used for randomized search
+  scoring: [roc_auc_ovr, accuracy]
+  refit: roc_auc_ovr
+  n_splits: 3
+  test_size: 0.2
+  seed: *seed
+
+estimators:
+  dt:
+    use_sample_weights: false
+    params:
+      o: survival_48h
+    calibrate: true
+    include_ccp_alphas: true
+    hparams:
+      estimator__class_weight: [null]
+      estimator__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+
+  dt_switch:
+    use_sample_weights: false
+    params:
+      y_prev: prev_treatment
+      o: survival_48h
+    calibrate: true
+    include_ccp_alphas: true
+    hparams:
+      estimator__estimator_s__class_weight: [null]
+      estimator__estimator_s__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_s__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+      estimator__estimator_t__class_weight: [null]
+      estimator__estimator_t__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_t__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+
+  dt_stage_switch:
+    use_sample_weights: false
+    params:
+      stages: bloc
+      y_prev: prev_treatment
+      o: survival_48h
+    calibrate: true
+    include_ccp_alphas: true
+    hparams:
+      estimator__estimator_bl__class_weight: [null]
+      estimator__estimator_bl__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_bl__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+      estimator__estimator_s__class_weight: [null]
+      estimator__estimator_s__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_s__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+      estimator__estimator_t__class_weight: [null]
+      estimator__estimator_t__max_depth: [2, 3, 4, 5, 6, 7, 8, 9]
+      estimator__estimator_t__min_weight_fraction_leaf: [0.01, 0.02, 0.03, 0.04, 0.05]
+
+  mlp:
+    is_net_estimator: true
+    use_sample_weights: false
+    params: null
+    numerical_transformation: scale
+    categorical_transformation: shift
+    calibrate: true
+    hparams:
+      estimator__batch_size: [32, 64, 128]
+      estimator__optimizer__lr: [0.001, 0.01, 0.1]
+      estimator__module__encoder__hidden_dims: [[16,], [32,], [64,], [16, 16], [32, 32], [64, 64]]
+      estimator__module__encoder__output_dim: [16, 32, 64]
+
+  rnn:
+    is_net_estimator: true
+    use_sample_weights: false
+    params:
+      groups: icustayid
+    numerical_transformation: scale
+    categorical_transformation: shift
+    calibrate: true
+    hparams:
+      estimator__batch_size: [32, 64, 128]
+      estimator__optimizer__lr: [0.001, 0.01, 0.1]
+      estimator__module__encoder__output_dim: [16, 32, 64]
