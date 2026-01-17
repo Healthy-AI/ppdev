@@ -27,6 +27,7 @@ from sklearn.utils.metadata_routing import (
 from .metrics import sce
 from .data import OPEDataset
 from .utils import pad_pack_sequences, seed_torch, Dataset
+from .tree import ExtendedTree
 
 MAX_INT = np.iinfo(np.int32).max
 
