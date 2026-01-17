@@ -15,8 +15,6 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.utils._param_validation import validate_params, Interval, StrOptions
 from sklearn.tree._export import _MPLTreeExporter
 
-from .estimators import OutcomeTree
-
 
 class TreeExporter(_MPLTreeExporter):
     def __init__(
@@ -118,7 +116,6 @@ class TreeExporter(_MPLTreeExporter):
         "decision_tree": [
             DecisionTreeClassifier,
             DecisionTreeRegressor,
-            OutcomeTree,
         ],
         "max_depth": [Interval(Integral, 0, None, closed="left"), None],
         "feature_names": ["array-like", None],
