@@ -12,7 +12,7 @@ git clone https://github.com/antmats/ReassessDTR.git
 
 The `ReassessDTR` repository is used for training the offline reinforcement learning policies included in our experiments.
 
-We use `pixi` as our package manager. Before installing dependencies, make sure `pixi` is installed by following the instructions here: [these instructions](https://pixi.sh/latest/#installation).
+We use `pixi` as our package manager. Before installing dependencies, make sure `pixi` is installed by following the instructions [here](https://pixi.sh/latest/#installation).
 
 Once `pixi` is installed, run the following command in **each** of the cloned repositories:
 ```bash
